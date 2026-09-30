@@ -34,11 +34,16 @@ cd tests && python3 -m unittest discover                # 51 tests
 ```
 Simulator touch lines: `tap X`, `hold X MS`, `down X`, `up` (X = pixel, bar is 2170 px wide).
 
-## Run it as an app
+## Install and run it as an app
 ```bash
-bin/ctb install --enable            # once: hooks + statusLine + the bridge (user level)
-sudo packaging/install-root.sh      # once: the ctb-bar service and the "Claude Touch Bar" app (see packaging/README.md)
+git clone https://github.com/ysonggit/claude-touchbar && cd claude-touchbar
+./install.sh --check      # optional: check prerequisites only, changes nothing
+./install.sh              # asks before each change; uses sudo for the root-level steps
 ```
+`install.sh` checks the machine, installs `python3-cairo`/`python3-pil` if missing, blacklists `hid_sensor_hub`,
+finds or builds [barkeep](https://github.com/mgd34msu/barkeep), then runs `bin/ctb install --enable` (hooks,
+statusLine, bridge) and `sudo packaging/install-root.sh` (service, sleep hook, app). The stock T1 driver
+(`apple_ibridge`) must already be installed. Remove everything with `./install.sh --uninstall`.
 Then open **Claude Touch Bar** from Activities (or pin it to the dock). It asks for your password, takes over the
 Touch Bar and shows a notification when it is on; open Claude Code and its status appears on the bar.
 Right-click the icon → **Stop** to end it; the bar's keys work again, and the stock icons return after a reboot.
