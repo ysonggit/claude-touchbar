@@ -1,0 +1,24 @@
+#!/bin/sh
+# Root helper behind the "Claude Touch Bar" app: start | stop | status of ctb-bar.service.
+# Run through pkexec (policy com.github.ysonggit.claude-touchbar), which asks for an admin password.
+# It accepts nothing but these three words, so the password prompt authorises exactly this.
+set -u
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+case "${1:-}" in
+    start)
+        # A renderer started by hand would hold /dev/dfr0 and make the service's one exit.
+        pkill -f 'python3 .*bin/ctb bar' 2>/dev/null
+        systemctl reset-failed ctb-bar.service 2>/dev/null
+        systemctl start ctb-bar.service
+        ;;
+    stop)
+        systemctl stop ctb-bar.service
+        ;;
+    status)
+        systemctl is-active ctb-bar.service
+        ;;
+    *)
+        echo "usage: ctb-launch start|stop|status" >&2
+        exit 2
+        ;;
+esac

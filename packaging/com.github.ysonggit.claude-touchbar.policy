@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Claude Touch Bar</vendor>
+  <vendor_url>https://github.com/ysonggit/claude-touchbar</vendor_url>
+  <action id="com.github.ysonggit.claude-touchbar.launch">
+    <description>Start or stop the Claude Touch Bar display</description>
+    <message>Claude Touch Bar needs to take over the Touch Bar display</message>
+    <icon_name>claude-touchbar</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <!-- password once, then remembered for a few minutes; the renderer runs as root -->
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/ctb/ctb-launch</annotate>
+  </action>
+</policyconfig>

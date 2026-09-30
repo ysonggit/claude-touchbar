@@ -8,7 +8,8 @@ USAGE = """usage: ctb <command>
   install [--dry-run] [--enable] [--no-systemd]   wire hooks + statusLine into ~/.claude/settings.json
   uninstall              reverse `install`
   doctor                 check the installation
-  probe pattern|touch DEV    hardware probes for milestone M0
+  probe pattern|touch [DEV]  hardware probes for milestone M0
+  app start|stop         what the "Claude Touch Bar" desktop launcher runs
 """
 
 
@@ -33,6 +34,9 @@ def main(argv=None):
     if cmd == "doctor":
         from .install import doctor
         return doctor(rest)
+    if cmd == "app":
+        from .app import main as m
+        return m(rest)
     if cmd == "probe":
         from .bar.main import probe
         return probe(rest)

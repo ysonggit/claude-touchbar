@@ -34,6 +34,16 @@ cd tests && python3 -m unittest discover                # 51 tests
 ```
 Simulator touch lines: `tap X`, `hold X MS`, `down X`, `up` (X = pixel, bar is 2170 px wide).
 
+## Run it as an app
+```bash
+bin/ctb install --enable            # once: hooks + statusLine + the bridge (user level)
+sudo packaging/install-root.sh      # once: the ctb-bar service and the "Claude Touch Bar" app (see packaging/README.md)
+```
+Then open **Claude Touch Bar** from Activities (or pin it to the dock). It asks for your password, takes over the
+Touch Bar and shows a notification when it is on; open Claude Code and its status appears on the bar.
+Right-click the icon → **Stop** to end it; the bar's keys work again, and the stock icons return after a reboot.
+Nothing starts at boot: after a reboot you have the normal Touch Bar until you open the app.
+
 ## Where the usage numbers come from
 - **Terminal `claude`:** the statusLine JSON (`ctb-status`) carries context, 5h/weekly limits, cost, model and effort.
 - **Desktop app (Code tab):** it runs hooks but not the statusLine command. So the bridge reads context % and model

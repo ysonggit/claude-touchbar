@@ -13,13 +13,15 @@ Nothing here is done by `ctb install`; it all changes kernel drivers, so you run
    confirmed only on the 13" MacBookPro13,2; this Mac is a **MacBookPro13,3 (15")**, so treat it as
    an experiment. Note the known **suspend hang**; `ctb-sleep` works around it by handing the bar back
    to the stock drivers before sleeping.
-3. `sudo packaging/install-root.sh`: installs `ctb-bar.service`, `/usr/local/lib/ctb/ctb-display`,
-   the sleep hook and `/etc/ctb/bar.toml`. It does not enable or start anything.
+3. `sudo packaging/install-root.sh`: installs `ctb-bar.service`, `/usr/local/lib/ctb/` (`ctb-display`, `ctb-launch`),
+   the sleep hook, `/etc/ctb/bar.toml`, and the "Claude Touch Bar" app (desktop entry, icon, polkit policy).
+   It does not enable or start anything.
 4. Do the **M0 checklist** in the top-level README *before* enabling the service. Switch the display by
    hand with `sudo packaging/ctb-display up` and back with `sudo packaging/ctb-display down`.
 5. **Known limitation:** after display mode, the stock row's *icons* only come back on reboot (the keys, touch and
    brightness work again straight away, but the row is black). Nothing reachable from Linux restarts the T1's renderer.
-6. `sudo systemctl enable --now ctb-bar`. If anything goes wrong: `sudo systemctl stop ctb-bar` (its
+6. Start it from the **Claude Touch Bar** app (installed by step 3; it runs `systemctl start ctb-bar` through
+   pkexec, so it asks for an admin password). To start it at every boot instead: `sudo systemctl enable ctb-bar`. If anything goes wrong: `sudo systemctl stop ctb-bar` (its
    `ExecStopPost` runs `ctb-display down`), `sudo packaging/ctb-display down` by hand, or reboot:
    nothing is blacklisted except `hid_sensor_hub`.
 7. Remove everything: `sudo packaging/uninstall-root.sh` (then reboot to get the stock icons back).

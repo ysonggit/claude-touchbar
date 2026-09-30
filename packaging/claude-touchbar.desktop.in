@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Touch Bar
+GenericName=Touch Bar for Claude Code
+Comment=Show Claude Code's status and usage on the MacBook Pro Touch Bar
+Exec=@ROOT@/bin/ctb app start
+Icon=claude-touchbar
+Terminal=false
+Categories=Utility;
+Keywords=claude;touchbar;touch bar;macbook;
+StartupNotify=false
+Actions=stop;
+
+[Desktop Action stop]
+Name=Stop (the stock Touch Bar returns after a reboot)
+Exec=@ROOT@/bin/ctb app stop

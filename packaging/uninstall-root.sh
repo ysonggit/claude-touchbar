@@ -7,5 +7,9 @@ systemctl disable --now ctb-bar.service 2>/dev/null || true   # ExecStopPost rel
 "$(dirname "$0")/ctb-display" down || true
 rm -f /etc/systemd/system/ctb-bar.service /usr/lib/systemd/system-sleep/ctb-bar
 rm -rf /usr/local/lib/ctb
+rm -f /usr/share/polkit-1/actions/com.github.ysonggit.claude-touchbar.policy \
+      /usr/share/icons/hicolor/scalable/apps/claude-touchbar.svg /usr/share/applications/claude-touchbar.desktop
+gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
+update-desktop-database -q /usr/share/applications 2>/dev/null || true
 systemctl daemon-reload
 echo "Removed. /etc/ctb/bar.toml was kept (delete it yourself if you like)."
