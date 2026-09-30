@@ -1,0 +1,27 @@
+[Unit]
+Description=Claude Touch Bar renderer (host-drawn T1 Touch Bar)
+After=systemd-modules-load.service systemd-udev-settle.service
+# A failed start still runs ExecStopPost, so each retry hands the stock row back first.
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=@ROOT@
+Environment=CTB_RENDER_SOCK=/run/user/@UID@/ctb-render.sock
+Environment=CTB_BAR_CONFIG=/etc/ctb/bar.toml
+# Only used when barkeep is not installed with DKMS: its built source tree (bash scripts/build.sh).
+Environment=CTB_BARKEEP_DIR=@BARKEEP@
+# Stock drivers out, barkeep in, iBridge into USB config 2 (see ctb-display for the details).
+ExecStartPre=/usr/local/lib/ctb/ctb-display up
+ExecStart=/usr/bin/python3 @ROOT@/bin/ctb bar
+# Always give the firmware strip back, however this service ends (R-03).
+ExecStopPost=/usr/local/lib/ctb/ctb-display down
+TimeoutStartSec=60
+# down re-enumerates USB (twice if the stock driver needs a retry); don't SIGKILL it half-done.
+TimeoutStopSec=90
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

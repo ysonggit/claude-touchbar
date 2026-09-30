@@ -1,0 +1,21 @@
+#!/bin/sh
+# systemd-sleep hook (R-04): barkeep's display driver hangs the machine on suspend, so hand the
+# Touch Bar back to the stock drivers BEFORE sleeping and take it again on resume.
+# Only acts if ctb-bar was running; every step is time-bounded so it cannot stall the suspend.
+case "$1" in
+    pre)
+        if systemctl is-active --quiet ctb-bar.service; then
+            touch /run/ctb-bar-was-active
+            timeout 100 systemctl stop ctb-bar.service
+        fi
+        # No barkeep module bound means no URBs in flight when the USB core suspends.
+        timeout 15 rmmod barkeep_dfr 2>/dev/null
+        ;;
+    post)
+        if [ -e /run/ctb-bar-was-active ]; then
+            rm -f /run/ctb-bar-was-active
+            timeout 100 systemctl start ctb-bar.service
+        fi
+        ;;
+esac
+exit 0

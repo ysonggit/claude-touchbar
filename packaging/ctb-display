@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# Switch the T1 Touch Bar between the stock firmware-drawn row and barkeep's host-drawn display.
+#   ctb-display up       stock drivers out, barkeep in, iBridge in USB config 2, /dev/dfr0 ready
+#   ctb-display down     barkeep out, iBridge back in config 1, stock row running again (never fails)
+#   ctb-display status   what is bound right now
+# Run as root. ctb-bar.service calls `up` as ExecStartPre and `down` as ExecStopPost.
+#
+# Things this has to get right, all seen on this MacBookPro13,3:
+#  - apple_ibridge force-selects config 1 whenever it probes (apple-ibridge.c, appleib_hid_probe),
+#    so it must really be unloaded before config 2. iio-sensor-proxy holds apple_ib_als open,
+#    which silently blocks that unload, so it is stopped first and restarted by `down`. Stopping
+#    it is not enough: the ALS IIO buffer/trigger it enabled keep holding the module.
+#  - apple-ib-tb only activates when apple-ibridge-hid owns BOTH iBridge HID interfaces;
+#    hid-sensor-hub likes to grab the second one, so `down` rebinds them explicitly.
+#  - Writing bConfigurationValue from userspace does not switch the iBridge reliably;
+#    re-enumerate (authorized 0/1) instead, with runtime PM off so it cannot fail with -22.
+set -u
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+STATE=/run/ctb
+# barkeep's built source tree, for when it is not installed with DKMS. Run by hand under sudo,
+# default to the invoking user's ~/barkeep; ctb-bar.service sets it explicitly.
+BARKEEP_DIR=${CTB_BARKEEP_DIR:-$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/barkeep}
+HIDDRV=/sys/bus/hid/drivers
+
+log() { echo "ctb-display: $*" >&2; }
+
+ibridge() {
+    local d
+    for d in /sys/bus/usb/devices/*; do
+        [ "$(cat "$d/idVendor" 2>/dev/null)" = 05ac ] && [ "$(cat "$d/idProduct" 2>/dev/null)" = 8600 ] \
+            && { echo "$d"; return 0; }
+    done
+    return 1
+}
+
+cfg() { timeout 5 cat "$D/bConfigurationValue" 2>/dev/null; }
+
+reenumerate() {
+    timeout 5 sh -c "echo on > $D/power/control" 2>/dev/null
+    timeout 15 sh -c "echo 0 > $D/authorized" 2>/dev/null; sleep 2
+    timeout 15 sh -c "echo 1 > $D/authorized" 2>/dev/null; sleep 4
+}
+
+# modprobe if barkeep is installed (DKMS), else insmod the modules built in $CTB_BARKEEP_DIR.
+load_barkeep() {
+    local mod=$1; shift
+    if modinfo "$mod" >/dev/null 2>&1; then
+        modprobe "$mod" "$@"
+    elif [ -n "$BARKEEP_DIR" ] && [ -f "$BARKEEP_DIR/${mod//_/-}/${mod//_/-}.ko" ]; then
+        insmod "$BARKEEP_DIR/${mod//_/-}/${mod//_/-}.ko" "$@"
+    else
+        log "$mod not found: install barkeep (DKMS) or set CTB_BARKEEP_DIR to its built source tree"
+        return 1
+    fi
+}
+
+bar_active() { ls /sys/bus/hid/devices/0003:05AC:8600.*/fnmode >/dev/null 2>&1; }
+
+
+# Give every iBridge HID interface to apple-ibridge-hid (replaces barkeep's missing touchbar-rebind).
+rebind() {
+    local d id drv
+    [ -d "$HIDDRV/apple-ibridge-hid" ] || return 1
+    for d in /sys/bus/hid/devices/0003:05AC:8600.*; do
+        [ -e "$d" ] || continue
+        id=$(basename "$d")
+        drv=$(basename "$(readlink "$d/driver" 2>/dev/null)" 2>/dev/null)
+        [ "$drv" = apple-ibridge-hid ] && continue
+        [ -n "$drv" ] && timeout 10 sh -c "echo $id > $HIDDRV/$drv/unbind" 2>/dev/null
+        timeout 10 sh -c "echo $id > $HIDDRV/apple-ibridge-hid/bind" 2>/dev/null \
+            || log "could not bind $id to apple-ibridge-hid"
+    done
+}
+
+stock_on() {
+    timeout 15 modprobe -a apple_ibridge apple_ib_tb apple_ib_als 2>/dev/null
+    sleep 1
+    rebind
+    sleep 1
+}
+
+up() {
+    mkdir -p "$STATE"
+    if systemctl is-active --quiet iio-sensor-proxy.service; then
+        touch "$STATE/iio-sensor-proxy"
+        timeout 15 systemctl stop iio-sensor-proxy.service
+    fi
+    # An enabled IIO buffer and a selected trigger on the ALS each pin apple_ib_als, and
+    # iio-sensor-proxy leaves both set when it stops. Release them (it sets them again on restart).
+    local iio
+    for iio in "$D"/*/0003:05AC:8600.*/iio:device*; do
+        [ -d "$iio" ] || continue
+        for f in "$iio"/buffer*/enable; do [ -e "$f" ] && echo 0 > "$f"; done
+        [ -e "$iio/trigger/current_trigger" ] && echo > "$iio/trigger/current_trigger"
+    done
+    rmmod barkeep_dfr 2>/dev/null; rmmod barkeep_cfgsel 2>/dev/null
+    for m in apple_ib_tb apple_ib_als apple_ibridge; do
+        [ -d /sys/module/$m ] && timeout 10 rmmod $m
+    done
+    if [ -d /sys/module/apple_ibridge ]; then
+        log "apple_ibridge is still loaded (refcount $(cat /sys/module/apple_ibridge/refcnt)," \
+            "holders: $(ls /sys/module/apple_ibridge/holders | tr '\n' ' ')); it would force config 1"
+        return 1
+    fi
+    # colr/colg/colb=0: the module fills frames until ctb-bar draws, so keep that fill black.
+    load_barkeep barkeep_cfgsel config=1 || return 1
+    load_barkeep barkeep_dfr rect_w=2170 bpp=3 fbmode=1 period=1 colr=0 colg=0 colb=0 || return 1
+    echo 2 > /sys/module/barkeep_cfgsel/parameters/config
+    reenumerate
+    local i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        [ "$(cfg)" = 2 ] && [ -c /dev/dfr0 ] && { touch "$STATE/displayed"; log "config 2, /dev/dfr0 ready"; return 0; }
+        sleep 1
+    done
+    log "iBridge did not stay in config 2 (config=$(cfg)); see: journalctl -k | grep barkeep"
+    return 1
+}
+
+down() {
+    timeout 10 rmmod barkeep_dfr 2>/dev/null
+    timeout 10 rmmod barkeep_cfgsel 2>/dev/null
+    # Unloading barkeep-cfgsel leaves the iBridge with no USB device driver, and usbcore does not
+    # rebind the generic one by itself; without it the device stays unconfigured (config empty).
+    [ -e "$D/driver" ] || timeout 15 sh -c "echo $(basename "$D") > /sys/bus/usb/drivers/usb/bind" 2>/dev/null
+    sleep 2
+    [ "$(cfg)" != 1 ] && reenumerate
+    stock_on
+    if ! bar_active; then
+        # Seen after a barkeep session: apple-ibridge-hid fails with "failed to open hid: -5"
+        # until the device is enumerated again.
+        log "stock Touch Bar did not activate; re-enumerating once"
+        timeout 10 rmmod apple_ib_tb apple_ib_als apple_ibridge 2>/dev/null
+        [ -e "$D/driver" ] || timeout 15 sh -c "echo $(basename "$D") > /sys/bus/usb/drivers/usb/bind" 2>/dev/null
+        reenumerate
+        stock_on
+    fi
+    if [ -e "$STATE/iio-sensor-proxy" ]; then
+        rm -f "$STATE/iio-sensor-proxy"
+        timeout 15 systemctl start iio-sensor-proxy.service
+    fi
+    # The stock driver works again (keys, touch, brightness), but on a MacBookPro13,3 the T1 firmware
+    # does not draw its function-row icons again after a display session until the machine reboots;
+    # USB re-enumeration, a port reset and resending display-on/mode all leave the row black.
+    [ -e "$STATE/displayed" ] && { rm -f "$STATE/displayed"; log "the row stays black until reboot (T1 firmware)"; }
+    if bar_active; then log "stock Touch Bar active (config $(cfg))"
+    else log "stock Touch Bar NOT active (config $(cfg)); a reboot restores it"; fi
+    return 0
+}
+
+status() {
+    local d
+    echo "iBridge: $D  config=$(cfg)  power=$(cat "$D/power/control" 2>/dev/null)"
+    for d in /sys/bus/hid/devices/0003:05AC:8600.*; do
+        [ -e "$d" ] && echo "  $(basename "$d") -> $(basename "$(readlink "$d/driver" 2>/dev/null)" 2>/dev/null)"
+    done
+    echo "modules: $(lsmod | awk '/^(apple_ib|barkeep)/{printf "%s ", $1}')"
+    bar_active && echo "stock Touch Bar: active" || echo "stock Touch Bar: not active"
+    [ -c /dev/dfr0 ] && echo "/dev/dfr0: present" || echo "/dev/dfr0: absent"
+}
+
+case "${1:-}" in
+    up|down|status) ;;
+    *) echo "usage: ctb-display up|down|status" >&2; exit 2 ;;
+esac
+D=$(ibridge) || { log "no Apple iBridge (05ac:8600) found"; [ "$1" = down ] && exit 0; exit 1; }
+[ "$1" = status ] || [ "$(id -u)" = 0 ] || { log "run as root"; exit 1; }
+if [ "$1" = up ]; then
+    # Never leave the bar dark: a half-done `up` has already unloaded the stock driver.
+    up || { log "up failed; restoring the stock Touch Bar"; down; exit 1; }
+else
+    "$1"
+fi

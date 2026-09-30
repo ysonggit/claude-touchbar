@@ -1,0 +1,16 @@
+# /etc/ctb/bar.toml: read by ctb-bar (root). Only the [bar] table matters here.
+[bar]
+backend        = "dfr0"        # dfr0 (barkeep) | png (development)
+dfr_device     = "/dev/dfr0"
+rotate         = "cw"          # cw | ccw | none. Verified on MacBookPro13,3 (2026-09-30, `ctb probe pattern`)
+default_layer  = "claude"      # claude | fkeys | media
+control_strip  = ["brightness", "volume", "mute", "playpause"]
+dim_after_s    = 60
+off_after_s    = 300
+font           = "Sans"
+style          = "pulse"       # pulse (claude-pulse-like meters with reset times) | classic
+# Touch: confirm during M0 with `sudo ctb probe touch` (auto-detects the node):
+touch_device   = "auto"        # auto = iBridge USB interface 2, or a /dev/hidrawN path
+touch_x_offset = 0             # float32 X at byte 0, as barkeep reads it; confirm with `ctb probe touch`
+touch_x_min    = 0.5
+touch_x_max    = 1.0
