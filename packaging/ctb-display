@@ -79,8 +79,20 @@ stock_on() {
     sleep 1
 }
 
+# A renderer (ctb bar) holds /dev/dfr0 open, and while it does barkeep_dfr cannot be unloaded.
+# Under ctb-bar.service `up`/`down` run before/after the service's own renderer, so any renderer
+# still running here was started by hand.
+stop_renderers() {
+    pkill -f 'python3 .*bin/ctb bar' 2>/dev/null || return 0
+    local i
+    for i in 1 2 3 4 5; do pgrep -f 'python3 .*bin/ctb bar' >/dev/null || return 0; sleep 1; done
+    pkill -9 -f 'python3 .*bin/ctb bar' 2>/dev/null
+    sleep 1
+}
+
 up() {
     mkdir -p "$STATE"
+    stop_renderers
     if systemctl is-active --quiet iio-sensor-proxy.service; then
         touch "$STATE/iio-sensor-proxy"
         timeout 15 systemctl stop iio-sensor-proxy.service
@@ -94,6 +106,10 @@ up() {
         [ -e "$iio/trigger/current_trigger" ] && echo > "$iio/trigger/current_trigger"
     done
     rmmod barkeep_dfr 2>/dev/null; rmmod barkeep_cfgsel 2>/dev/null
+    if [ -d /sys/module/barkeep_dfr ]; then
+        log "barkeep_dfr is still loaded and in use (refcount $(cat /sys/module/barkeep_dfr/refcnt))"
+        return 1
+    fi
     for m in apple_ib_tb apple_ib_als apple_ibridge; do
         [ -d /sys/module/$m ] && timeout 10 rmmod $m
     done
@@ -117,6 +133,7 @@ up() {
 }
 
 down() {
+    stop_renderers
     timeout 10 rmmod barkeep_dfr 2>/dev/null
     timeout 10 rmmod barkeep_cfgsel 2>/dev/null
     # Unloading barkeep-cfgsel leaves the iBridge with no USB device driver, and usbcore does not
