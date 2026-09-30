@@ -3,7 +3,11 @@
 Shows what Claude Code is doing on the **T1 MacBook Pro Touch Bar under Linux**, and lets you answer
 permission / plan prompts by touching the bar. Spec: [SPEC.md](SPEC.md) (see its §12 for what is built).
 
-![Touch Bar layouts: status with usage meters, high usage, permission prompt, question](docs/touchbar.png)
+![The Touch Bar of a MacBookPro13,3 running Ubuntu, showing Claude Code's current tool, the mascot, and Session / Weekly / Context usage meters](docs/macbook-touchbar.jpg)
+
+*On the real hardware: a 2016 15" MacBook Pro (MacBookPro13,3) running Ubuntu 22.04.*
+
+![Rendered layouts: status with usage meters, high usage, permission prompt, question](docs/touchbar.png)
 
 **Status (2026-09-30, MacBookPro13,3):** host-drawn display, live Claude status with claude-pulse-style
 Session / Weekly / Context meters, touch keys (brightness, volume, media) all verified on hardware.
