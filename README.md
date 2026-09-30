@@ -3,6 +3,10 @@
 Shows what Claude Code is doing on the **T1 MacBook Pro Touch Bar under Linux**, and lets you answer
 permission / plan prompts by touching the bar. Spec: [SPEC.md](SPEC.md) (see its §12 for what is built).
 
+> **Tested only on: MacBook Pro 2016 (15", MacBookPro13,3, T1 chip) + Ubuntu 22.04 LTS** (kernel 6.8 HWE,
+> Python 3.10). Other T1 models (e.g. the 13" MacBookPro13,2) and other distributions are untested.
+> T2 and Apple-silicon Macs are not supported: their Touch Bars use different drivers.
+
 ![The Touch Bar of a MacBookPro13,3 running Ubuntu, showing Claude Code's current tool, the mascot, and Session / Weekly / Context usage meters](docs/macbook-touchbar.jpg)
 
 *On the real hardware: a 2016 15" MacBook Pro (MacBookPro13,3) running Ubuntu 22.04.*
