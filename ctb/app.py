@@ -16,6 +16,10 @@ def _notify(summary, body=""):
                    check=False)
 
 
+def _service_active():
+    return subprocess.run(["systemctl", "is-active", "--quiet", "ctb-bar.service"], check=False).returncode == 0
+
+
 def _helper(action):
     return subprocess.run(["pkexec", HELPER, action], check=False,
                           capture_output=True, text=True)
@@ -32,6 +36,9 @@ def main(args):
         return 1
     if action == "start":
         subprocess.run(["systemctl", "--user", "start", "ctb-bridge.service"], check=False)
+        if _service_active():                # a second click must not restart (and blank) the bar
+            _notify("Claude Touch Bar is already on")
+            return 0
     r = _helper(action)
     if r.returncode in (126, 127):        # password dialog dismissed / not authorised
         _notify("Claude Touch Bar: cancelled")
@@ -41,9 +48,7 @@ def main(args):
                 "The keys work again; the stock Touch Bar icons come back after a reboot.")
         return r.returncode
     for _ in range(30):                   # `ctb-display up` re-enumerates USB (~10 s)
-        active = subprocess.run(["systemctl", "is-active", "ctb-bar.service"], check=False,
-                                capture_output=True, text=True).stdout.strip()
-        if active == "active" and os.path.exists("/dev/dfr0"):
+        if _service_active() and os.path.exists("/dev/dfr0"):
             _notify("Claude Touch Bar is on", "Open Claude Code to see its status on the bar.")
             return 0
         time.sleep(1)

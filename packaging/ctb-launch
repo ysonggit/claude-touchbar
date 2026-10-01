@@ -6,6 +6,8 @@ set -u
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 case "${1:-}" in
     start)
+        # Already on: leave it alone. (The pkill below would also match the service's own renderer.)
+        systemctl is-active --quiet ctb-bar.service && exit 0
         # A renderer started by hand would hold /dev/dfr0 and make the service's one exit.
         pkill -f 'python3 .*bin/ctb bar' 2>/dev/null
         systemctl reset-failed ctb-bar.service 2>/dev/null
