@@ -103,6 +103,47 @@ class UsageTests(unittest.TestCase):
         self.assertIsNone(usage.plan_name({}))
 
 
+class TokenRefreshTests(unittest.TestCase):
+    def _run(self, creds, response, cli_refreshes_meanwhile=False):
+        import io, json, os, tempfile
+        from unittest import mock
+        from ctb import usage
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, ".credentials.json")
+        with open(path, "w") as f:
+            json.dump(creds, f)
+
+        def fake_urlopen(req, timeout=None):
+            sent = json.loads(req.data)
+            self.assertEqual((sent["grant_type"], sent["client_id"]), ("refresh_token", usage.CLIENT_ID))
+            if cli_refreshes_meanwhile:
+                with open(path, "w") as f:
+                    json.dump({"claudeAiOauth": dict(creds["claudeAiOauth"], refreshToken="cli-rt")}, f)
+            return io.BytesIO(json.dumps(response).encode())
+        with mock.patch.object(usage, "CREDENTIALS", path), \
+                mock.patch.object(usage.urllib.request, "urlopen", fake_urlopen):
+            out = usage.refresh(creds["claudeAiOauth"])
+        with open(path) as f:
+            return out, json.load(f), oct(os.stat(path).st_mode & 0o777), os.path.exists(path + ".ctb-bak")
+
+    def test_refresh_writes_back(self):
+        creds = {"claudeAiOauth": {"accessToken": "old", "refreshToken": "rt", "expiresAt": 1,
+                                   "scopes": ["user:inference"], "subscriptionType": "pro"}, "mcpOAuth": {"x": 1}}
+        out, disk, mode, bak = self._run(creds, {"access_token": "new", "refresh_token": "rt2", "expires_in": 3600})
+        self.assertEqual((out["accessToken"], out["refreshToken"]), ("new", "rt2"))
+        self.assertEqual(disk["claudeAiOauth"]["accessToken"], "new")
+        self.assertEqual(disk["claudeAiOauth"]["subscriptionType"], "pro")     # other fields kept
+        self.assertEqual(disk["mcpOAuth"], {"x": 1})                           # other sections kept
+        self.assertEqual(mode, "0o600")
+        self.assertTrue(bak)
+
+    def test_cli_refresh_meanwhile_wins(self):
+        creds = {"claudeAiOauth": {"accessToken": "old", "refreshToken": "rt", "expiresAt": 1}}
+        out, disk, _, _ = self._run(creds, {"access_token": "new", "expires_in": 3600}, cli_refreshes_meanwhile=True)
+        self.assertEqual(disk["claudeAiOauth"]["refreshToken"], "cli-rt")       # not overwritten
+        self.assertEqual(out["refreshToken"], "cli-rt")
+
+
 class PanelTests(unittest.TestCase):
     def test_display_report_id(self):
         from ctb.bar import panel
