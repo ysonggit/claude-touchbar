@@ -13,9 +13,10 @@ permission / plan prompts by touching the bar. Spec: [SPEC.md](SPEC.md) (see its
 
 ![Rendered layouts: status with usage meters, high usage, permission prompt, question](docs/touchbar.png)
 
-**Status (2026-09-30, MacBookPro13,3):** host-drawn display, live Claude status with claude-pulse-style
-Session / Weekly / Context meters, touch keys (brightness, volume, media) all verified on hardware.
-Not yet verified: Fn layer, suspend/resume, running as the `ctb-bar` service.
+**Status (2026-10-01, MacBookPro13,3):** verified on hardware: host-drawn display, live Claude status with
+claude-pulse-style Session / Weekly / Context meters (also from the desktop app), touch keys (brightness, volume,
+media), the "Claude Touch Bar" app starting the `ctb-bar` service, and the normal Touch Bar after a reboot.
+Not yet verified: Fn layer, suspend/resume.
 **Known limitation:** after display mode, the stock function row only comes back on reboot (see `packaging/README.md`).
 
 ```
@@ -30,7 +31,7 @@ bin/ctb bridge &                                        # the bridge
 CTB_BAR_CONFIG=/nonexistent bin/ctb bar --png /tmp/bar.png --sim   # bar → PNG; type simulated touches on stdin
 python3 tools/preview.py /tmp/all-modes.png             # render every layout to one PNG
 python3 tools/e2e_claude.py allow                       # REAL Claude Code through the hooks (one small model call)
-cd tests && python3 -m unittest discover                # 51 tests
+cd tests && python3 -m unittest discover                # 55 tests
 ```
 Simulator touch lines: `tap X`, `hold X MS`, `down X`, `up` (X = pixel, bar is 2170 px wide).
 
