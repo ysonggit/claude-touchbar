@@ -55,6 +55,10 @@ case "$model" in
     *) warn "'$model' is not a T1 MacBook Pro; this project only drives the T1 Touch Bar"
        ask "Continue anyway?" || exit 1 ;;
 esac
+if grep -qsx 1281 /sys/bus/usb/devices/*/idProduct && ! grep -qsx 8600 /sys/bus/usb/devices/*/idProduct; then
+    warn "The T1 is in recovery mode (05ac:1281): no Touch Bar until macOS is back on the disk"
+    warn "(see README, \"Touch Bar is dead\"). The install works, but the bar cannot start."
+fi
 . /etc/os-release 2>/dev/null
 [ "${VERSION_ID:-}" = 22.04 ] && [ "${ID:-}" = ubuntu ] && ok "Ubuntu 22.04" \
     || warn "${PRETTY_NAME:-unknown OS}: untested (tested on Ubuntu 22.04)"

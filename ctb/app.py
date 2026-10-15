@@ -20,6 +20,19 @@ def _service_active():
     return subprocess.run(["systemctl", "is-active", "--quiet", "ctb-bar.service"], check=False).returncode == 0
 
 
+def t1_in_recovery():
+    """True when the T1 shows up as 05ac:1281 (recovery mode) instead of the iBridge: no Touch Bar at all."""
+    base = "/sys/bus/usb/devices"
+    for d in os.listdir(base) if os.path.isdir(base) else ():
+        try:
+            with open(f"{base}/{d}/idVendor") as v, open(f"{base}/{d}/idProduct") as p:
+                if (v.read().strip(), p.read().strip()) == ("05ac", "1281"):
+                    return True
+        except OSError:
+            continue
+    return False
+
+
 def _helper(action):
     return subprocess.run(["pkexec", HELPER, action], check=False,
                           capture_output=True, text=True)
@@ -33,6 +46,11 @@ def main(args):
     if not os.path.exists(HELPER):
         _notify("Claude Touch Bar is not installed",
                 "Run: sudo packaging/install-root.sh (in the claude-touchbar folder)")
+        return 1
+    if action == "start" and t1_in_recovery():
+        _notify("The Touch Bar chip is in recovery mode",
+                "Its OS is loaded from macOS, which is no longer on this disk. Reinstall macOS alongside "
+                "Linux; see the README section \"Touch Bar is dead\".")
         return 1
     if action == "start":
         subprocess.run(["systemctl", "--user", "start", "ctb-bridge.service"], check=False)

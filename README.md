@@ -50,6 +50,17 @@ Touch Bar and shows a notification when it is on; open Claude Code and its statu
 Right-click the icon → **Stop** to end it; the bar's keys work again, and the stock icons return after a reboot.
 Nothing starts at boot: after a reboot you have the normal Touch Bar until you open the app.
 
+## Touch Bar is dead (blank, even before the app runs)
+Check `lsusb | grep 05ac`. If it shows `05ac:1281 Apple Mobile Device [Recovery Mode]` instead of `05ac:8600 iBridge`,
+the T1 chip never loaded its OS. On 2016–2017 Touch Bar MacBook Pros the Mac loads it from the macOS install at
+power-on, so **removing macOS from the internal disk kills the Touch Bar**; no Linux driver can fix that.
+Put a small macOS back alongside Linux:
+1. Back up. From a Linux live USB, shrink your Linux partition with GParted to free about 40 GB.
+2. Boot Internet Recovery (hold **Cmd+Option+R**), format the free space as APFS in Disk Utility, install macOS
+   (Monterey is the newest for the MacBookPro13,3).
+3. Hold **Option** at power-on to pick the system; set the startup disk back to Linux if macOS becomes the default.
+4. In Linux, `lsusb` should show `05ac:8600`; then `sudo systemctl reset-failed ctb-bar.service` and open the app.
+
 ## Where the usage numbers come from
 - **Terminal `claude`:** the statusLine JSON (`ctb-status`) carries context, 5h/weekly limits, cost, model and effort.
 - **Desktop app (Code tab):** it runs hooks but not the statusLine command. So the bridge reads context % and model
