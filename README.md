@@ -36,6 +36,13 @@ cd tests && python3 -m unittest discover                # 55 tests
 Simulator touch lines: `tap X`, `hold X MS`, `down X`, `up` (X = pixel, bar is 2170 px wide).
 
 ## Install and run it as an app
+**Prerequisites**
+- **macOS must stay installed on the internal disk**, alongside Linux. A small APFS partition (~40 GB) is enough.
+  The Mac loads the T1's OS from macOS at power-on. Without macOS the Touch Bar is dead under Linux
+  (see [Touch Bar is dead](#touch-bar-is-dead-blank-even-before-the-app-runs)). Never wipe the whole disk for Linux.
+- The stock T1 driver (`apple_ibridge`, DKMS) installed and showing the normal Touch Bar.
+- Claude Code (`claude`) in `PATH`.
+
 ```bash
 git clone https://github.com/ysonggit/claude-touchbar && cd claude-touchbar
 ./install.sh --check      # optional: check prerequisites only, changes nothing
@@ -43,8 +50,8 @@ git clone https://github.com/ysonggit/claude-touchbar && cd claude-touchbar
 ```
 `install.sh` checks the machine, installs `python3-cairo`/`python3-pil` if missing, blacklists `hid_sensor_hub`,
 finds or builds [barkeep](https://github.com/mgd34msu/barkeep), then runs `bin/ctb install --enable` (hooks,
-statusLine, bridge) and `sudo packaging/install-root.sh` (service, sleep hook, app). The stock T1 driver
-(`apple_ibridge`) must already be installed. Remove everything with `./install.sh --uninstall`.
+statusLine, bridge) and `sudo packaging/install-root.sh` (service, sleep hook, app). It warns if the T1 is in
+recovery mode (no macOS on the disk). Remove everything with `./install.sh --uninstall`.
 Then open **Claude Touch Bar** from Activities (or pin it to the dock). It asks for your password, takes over the
 Touch Bar and shows a notification when it is on; open Claude Code and its status appears on the bar.
 Right-click the icon → **Stop** to end it; the bar's keys work again, and the stock icons return after a reboot.
@@ -54,7 +61,8 @@ Nothing starts at boot: after a reboot you have the normal Touch Bar until you o
 Check `lsusb | grep 05ac`. If it shows `05ac:1281 Apple Mobile Device [Recovery Mode]` instead of `05ac:8600 iBridge`,
 the T1 chip never loaded its OS. On 2016–2017 Touch Bar MacBook Pros the Mac loads it from the macOS install at
 power-on, so **removing macOS from the internal disk kills the Touch Bar**; no Linux driver can fix that.
-Put a small macOS back alongside Linux:
+Put a small macOS back alongside Linux (verified on the MacBookPro13,3 on 2026-10-16: after this the T1 was `8600`
+again and the bar came back):
 1. Back up. From a Linux live USB, shrink your Linux partition with GParted to free about 40 GB.
 2. Boot Internet Recovery (hold **Cmd+Option+R**), format the free space as APFS in Disk Utility, install macOS
    (Monterey is the newest for the MacBookPro13,3).
