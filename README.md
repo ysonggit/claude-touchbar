@@ -84,6 +84,8 @@ the 5h/weekly limits and the plan from them (`ctb/codex.py`). The limit meters b
 session's own agent. Display only: Codex approvals are answered in Codex. Turn it off with
 `[codex] enabled = false` in the config.
 
+![Codex (OpenAI logo) and Claude Code sessions: the icon, the working model's name, the current tool, and the focused agent's Session / Weekly / Context meters](docs/touchbar-codex.png)
+
 ## Install the hooks (user level, reversible)
 ```bash
 bin/ctb install --dry-run      # show the resulting settings.json first
