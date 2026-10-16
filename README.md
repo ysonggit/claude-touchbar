@@ -78,7 +78,7 @@ again and the bar came back):
 
 ## Codex sessions
 
-Codex sessions show up on the bar too (teal mascot labelled "Codex"). There are no hooks to install:
+Codex sessions show up on the bar too (the OpenAI logo in place of the Claude mascot). There are no hooks to install:
 the bridge follows `~/.codex/sessions/*/*/*/rollout-*.jsonl` and reads state, the current tool, context use,
 the 5h/weekly limits and the plan from them (`ctb/codex.py`). The limit meters belong to the focused
 session's own agent. Display only: Codex approvals are answered in Codex. Turn it off with
