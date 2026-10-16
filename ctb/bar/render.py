@@ -308,10 +308,12 @@ class Renderer:
         chip = lay["chip"]
         # The mascot stands for the session; no project label (the +N badge still counts the others).
         codex = lay.get("agent") == "codex"
-        label = icon_txt or ""
+        # prompts pass a one-letter icon; otherwise the chip names the model that is working now
+        label = icon_txt or (lay.get("metrics") or {}).get("model") or ""
+        lsize, lbold = (22, True) if icon_txt else (19, False)
         mw = (LOGO_SIZE if codex else len(MASCOT[0]) * 4) + 10
-        w = max(110, min(320, mw + (self._text_w(c, label, 22, True) + 8 if label else 0) + 30
-                         + (46 if chip["waiting"] else 0)))
+        w = max(110, min(320, mw + (self._text_w(c, label, lsize, lbold) + 8 if label else 0) + 30
+                         + (46 + 6 if chip["waiting"] else 0)))
         col = STATE_COLOR.get(lay["state"], GREY)
         self._rrect(c, x, 7, w, self.h - 14)
         c.set_source_rgb(0.14, 0.14, 0.17)
@@ -322,8 +324,9 @@ class Renderer:
         tw = (self._logo(c, x + 16) if codex else self._mascot(c, x + 16)) + 8
         if label:
             tw += self._text(c, label, x + 16 + tw, w - 24 - tw - (46 if chip["waiting"] else 0),
-                             WHITE, 22, bold=True)
+                             WHITE, lsize, bold=lbold)
         if chip["waiting"]:
+            tw += 6
             pulse = 0.65 + 0.35 * math.sin(st.now * 5)
             bx = x + 16 + tw
             self._rrect(c, bx, 17, 38, self.h - 34, 8)
@@ -388,7 +391,7 @@ class Renderer:
                 c, "$%.2f" % m["cost"], x, 86, GREEN, 19, alpha=alpha)))
         if m.get("plan"):
             segs.append(("plan", 90, lambda c, x: self._text(c, m["plan"], x, 86, WHITE, 18, alpha=alpha)))
-        info = "·".join(str(v) for v in (m.get("model"), m.get("effort"), lay.get("branch")) if v)
+        info = "·".join(str(v) for v in (m.get("effort"), lay.get("branch")) if v)
         if info:
             segs.append(("model", 240, lambda c, x: self._text(c, info, x, 236, GREY, 18, alpha=alpha)))
         return segs
@@ -418,7 +421,7 @@ class Renderer:
         if "cost" in m:
             segs.append(("cost", 100, lambda c, x: self._text(
                 c, "$%.2f" % m["cost"], x, 92, WHITE, 19, alpha=alpha)))
-        info = "·".join(str(v) for v in (m.get("model"), m.get("effort"), lay.get("branch")) if v)
+        info = "·".join(str(v) for v in (m.get("effort"), lay.get("branch")) if v)
         if info:
             segs.append(("model", 260, lambda c, x: self._text(c, info, x, 250, GREY, 19, alpha=alpha)))
         return segs
