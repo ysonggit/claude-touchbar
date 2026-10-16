@@ -170,6 +170,7 @@ def transcript_metrics(path, window=0, tail=262144):
 class Session:
     def __init__(self, sid, cwd=None):
         self.sid = sid
+        self.agent = "claude"          # or "codex" (ctb/codex.py)
         self.cwd = cwd
         self.label = os.path.basename((cwd or "").rstrip("/")) or sid[:6]
         self.state = IDLE

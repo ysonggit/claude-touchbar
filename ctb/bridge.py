@@ -63,6 +63,7 @@ class Bridge:
         self.layout = {}
         self.manual = None  # (sid, until)
         self.usage = {}     # 5h/weekly limits + plan from ctb.usage (hooks-only clients)
+        self.codex_usage = {}  # same for Codex, from its rollout logs (ctb.codex)
         self._ids = itertools.count(1)
         self._servers = []
         self.refresh()
@@ -74,6 +75,7 @@ class Bridge:
         s = self.sessions.get(sid)
         if s is None:
             s = self.sessions[sid] = M.Session(sid, data.get("cwd"))
+            s.agent = data.get("ctb_agent") or "claude"
         elif data.get("cwd") and not s.cwd:
             s.cwd = data["cwd"]
         s.last_event = time.time()
@@ -331,12 +333,12 @@ class Bridge:
                       if x is not s and self._effective(x, now) in (M.INPUT, M.TERMINAL))
         lay = {
             "type": "layout", "mode": STATUS, "sessions": len(self.sessions),
-            "chip": {"label": s.label, "waiting": waiting},
+            "chip": {"label": s.label, "waiting": waiting}, "agent": s.agent,
             "state": name, "activity": s.activity if st != M.IDLE else "",
             "timer_start": s.turn_start if st in (M.THINKING, M.TOOL, M.INPUT) else None,
             "subagents": s.subagents, "compacting": s.compacting,
-            # account-wide limits from the usage poller fill in what the status line didn't send
-            "metrics": dict(self.usage, **s.metrics), "metrics_at": s.metrics_at,
+            # account-wide limits of the focused session's own agent fill in what it didn't send
+            "metrics": dict(self.codex_usage if s.agent == "codex" else self.usage, **s.metrics), "metrics_at": s.metrics_at,
             "branch": M.git_branch(s.cwd), "buttons": [{"id": "chip", "hold_ms": 0}],
             "attention": False,
             "thresholds": self.cfg["thresholds"],
@@ -479,6 +481,12 @@ class Bridge:
             os.chmod(path, 0o600)
             self._servers.append(srv)
 
+    async def codex_loop(self):
+        """Follow Codex rollout logs (display only) when [codex] enabled."""
+        if self.cfg.get("codex", {}).get("enabled", True):
+            from . import codex
+            await codex.run(self)
+
     async def usage_loop(self):
         """Poll account limits while any session exists; back off on errors (R-usage)."""
         from . import usage
@@ -512,6 +520,7 @@ def main():
 
     async def run():
         await bridge.start()
+        asyncio.ensure_future(bridge.codex_loop())
         await bridge.usage_loop()
         await asyncio.Event().wait()
 

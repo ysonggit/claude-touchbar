@@ -18,6 +18,7 @@ GREEN = (0.36, 0.85, 0.46)
 RED = (1.0, 0.36, 0.36)
 WHITE = (0.96, 0.96, 0.98)
 KEY_BG = (0.17, 0.17, 0.19)
+CODEX_TEAL = (0.20, 0.78, 0.66)
 CLAUDE_ORANGE = (0.843, 0.467, 0.341)          # #D77757, Claude Code's own accent
 # Claude Code's welcome-screen mascot, decoded from its block art
 #   ▐▛███▜▌  /  ▝▜█████▛▘  /  ▘▘ ▝▝     ('#' = lit pixel)
@@ -271,13 +272,13 @@ class Renderer:
             x += w + gap
         return x0 - 6
 
-    def _mascot(self, c, x, pw=4, ph=8):
+    def _mascot(self, c, x, pw=4, ph=8, color=CLAUDE_ORANGE):
         """Draws MASCOT with its left edge at x, vertically centred. Returns its width.
 
         Block-art pixels are half a terminal cell each way, so they are about twice as tall as wide.
         """
         y0 = round((self.h - len(MASCOT) * ph) / 2)
-        c.set_source_rgb(*CLAUDE_ORANGE)
+        c.set_source_rgb(*color)
         for r, row in enumerate(MASCOT):
             for col, ch in enumerate(row):
                 if ch == "#":
@@ -288,7 +289,8 @@ class Renderer:
     def _chip(self, c, x, lay, st, icon_txt=None):
         chip = lay["chip"]
         # The mascot stands for the session; no project label (the +N badge still counts the others).
-        label = icon_txt or ""
+        codex = lay.get("agent") == "codex"
+        label = icon_txt or ("Codex" if codex else "")
         mw = len(MASCOT[0]) * 4 + 10
         w = max(110, min(320, mw + (self._text_w(c, label, 22, True) + 8 if label else 0) + 30
                          + (46 if chip["waiting"] else 0)))
@@ -299,7 +301,7 @@ class Renderer:
         self._rrect(c, x, 7, 5, self.h - 14, 2)
         c.set_source_rgb(*col)
         c.fill()
-        tw = self._mascot(c, x + 16) + 8
+        tw = self._mascot(c, x + 16, color=CODEX_TEAL if codex else CLAUDE_ORANGE) + 8
         if label:
             tw += self._text(c, label, x + 16 + tw, w - 24 - tw - (46 if chip["waiting"] else 0),
                              WHITE, 22, bold=True)

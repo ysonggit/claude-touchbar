@@ -76,6 +76,14 @@ again and the bar came back):
   using the Claude Code login token in `~/.claude/.credentials.json` (sent only to api.anthropic.com, never logged).
   Turn the poll off with `[usage] enabled = false` in `~/.config/ctb/config.toml`.
 
+## Codex sessions
+
+Codex sessions show up on the bar too (teal mascot labelled "Codex"). There are no hooks to install:
+the bridge follows `~/.codex/sessions/*/*/*/rollout-*.jsonl` and reads state, the current tool, context use,
+the 5h/weekly limits and the plan from them (`ctb/codex.py`). The limit meters belong to the focused
+session's own agent. Display only: Codex approvals are answered in Codex. Turn it off with
+`[codex] enabled = false` in the config.
+
 ## Install the hooks (user level, reversible)
 ```bash
 bin/ctb install --dry-run      # show the resulting settings.json first

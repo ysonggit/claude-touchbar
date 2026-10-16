@@ -27,6 +27,8 @@ DEFAULTS = {
     "fallback": {"notifications": True},
     # 5h/weekly limits via Anthropic's OAuth usage endpoint, with the Claude Code login token
     "usage": {"enabled": True, "poll_s": 60},
+    # show Codex sessions (read from ~/.codex/sessions rollout logs; display only)
+    "codex": {"enabled": True},
     "statusline": {"passthrough": ""},
     "bar": {
         "backend": "dfr0",
